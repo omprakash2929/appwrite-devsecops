@@ -183,7 +183,38 @@ pipeline {
                 '''
             }
         }
+//------ STAGE 10 ----------------
+
+
+stage('Deploy Monitoring') {
+
+    steps {
+
+        sh '''
+            echo "Deploying monitoring resources..."
+
+            kubectl apply -f monitoring/servicemonitor.yaml
+
+            kubectl apply -f monitoring/alert-rules.yaml
+
+            echo "Monitoring deployment completed!"
+        '''
     }
+//-------- STAGE 11-----------------
+
+stage('Verify Monitoring') {
+
+    steps {
+
+        sh '''
+            kubectl get servicemonitor -n monitoring
+
+            kubectl get prometheusrule -n monitoring
+        '''
+    }
+  }
+}
+    } 
 
     // ─── POST ──────────────────────────────────────────────
     post {

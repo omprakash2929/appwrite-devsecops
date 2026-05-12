@@ -3,83 +3,143 @@
   "uid": "appwrite-prod-v1",
   "timezone": "browser",
   "refresh": "10s",
+  "tags": ["appwrite", "kubernetes", "devsecops"],
   "panels": [
     {
       "id": 1,
-      "title": "🟢 Pod Status",
+      "title": "🟢 Running Pods",
       "type": "stat",
-      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
-      "targets": [{
-        "expr": "kube_pod_status_phase{namespace='appwrite', phase='Running'}",
-        "legendFormat": "Running Pods"
-      }]
+      "gridPos": {"x": 0, "y": 0, "w": 4, "h": 4},
+      "options": {"colorMode": "background"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "red", "value": 0}, {"color": "green", "value": 1}]}}},
+      "targets": [{"expr": "sum(kube_pod_status_phase{namespace='appwrite', phase='Running'})", "legendFormat": "Running"}]
     },
     {
       "id": 2,
-      "title": "⚡ CPU Usage - Appwrite",
-      "type": "graph",
-      "gridPos": {"x": 6, "y": 0, "w": 9, "h": 8},
-      "targets": [{
-        "expr": "rate(container_cpu_usage_seconds_total{namespace='appwrite', container!=''}[5m]) * 100",
-        "legendFormat": "{{pod}}"
-      }]
+      "title": "🔄 Total Restarts",
+      "type": "stat",
+      "gridPos": {"x": 4, "y": 0, "w": 4, "h": 4},
+      "options": {"colorMode": "background"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 3}, {"color": "red", "value": 10}]}}},
+      "targets": [{"expr": "sum(kube_pod_container_status_restarts_total{namespace='appwrite'})", "legendFormat": "Restarts"}]
     },
     {
       "id": 3,
-      "title": "💾 Memory Usage - Appwrite",
-      "type": "graph",
-      "gridPos": {"x": 15, "y": 0, "w": 9, "h": 8},
-      "targets": [{
-        "expr": "container_memory_usage_bytes{namespace='appwrite', container!=''} / 1024 / 1024",
-        "legendFormat": "{{pod}} (MB)"
-      }]
+      "title": "⚡ CPU Usage %",
+      "type": "stat",
+      "gridPos": {"x": 8, "y": 0, "w": 4, "h": 4},
+      "options": {"colorMode": "background"},
+      "fieldConfig": {"defaults": {"unit": "percent", "color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 50}, {"color": "red", "value": 80}]}}},
+      "targets": [{"expr": "sum(rate(container_cpu_usage_seconds_total{namespace='appwrite', container!=''}[5m])) * 100", "legendFormat": "CPU %"}]
     },
     {
       "id": 4,
-      "title": "🔄 Pod Restarts",
+      "title": "💾 Memory Usage MB",
       "type": "stat",
-      "gridPos": {"x": 0, "y": 4, "w": 6, "h": 4},
-      "targets": [{
-        "expr": "kube_pod_container_status_restarts_total{namespace='appwrite'}",
-        "legendFormat": "{{pod}}"
-      }]
+      "gridPos": {"x": 12, "y": 0, "w": 4, "h": 4},
+      "options": {"colorMode": "background"},
+      "fieldConfig": {"defaults": {"unit": "decmbytes", "color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 512}, {"color": "red", "value": 900}]}}},
+      "targets": [{"expr": "sum(container_memory_usage_bytes{namespace='appwrite', container!=''}) / 1024 / 1024", "legendFormat": "Memory MB"}]
     },
     {
       "id": 5,
-      "title": "🌐 Network In - Appwrite",
-      "type": "graph",
-      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
-      "targets": [{
-        "expr": "rate(container_network_receive_bytes_total{namespace='appwrite'}[5m])",
-        "legendFormat": "{{pod}} RX"
-      }]
+      "title": "🚨 Firing Alerts",
+      "type": "stat",
+      "gridPos": {"x": 16, "y": 0, "w": 4, "h": 4},
+      "options": {"colorMode": "background"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "green", "value": 0}, {"color": "red", "value": 1}]}}},
+      "targets": [{"expr": "count(ALERTS{alertstate='firing'}) or vector(0)", "legendFormat": "Firing"}]
     },
     {
       "id": 6,
-      "title": "🌐 Network Out - Appwrite",
-      "type": "graph",
-      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
-      "targets": [{
-        "expr": "rate(container_network_transmit_bytes_total{namespace='appwrite'}[5m])",
-        "legendFormat": "{{pod}} TX"
-      }]
+      "title": "🏥 Cluster Health",
+      "type": "stat",
+      "gridPos": {"x": 20, "y": 0, "w": 4, "h": 4},
+      "options": {"colorMode": "background"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "red", "value": 0}, {"color": "green", "value": 1}]}}},
+      "targets": [{"expr": "sum(kube_node_status_condition{condition='Ready', status='true'})", "legendFormat": "Nodes Ready"}]
     },
     {
       "id": 7,
+      "title": "⚡ CPU Usage - Per Pod",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "percent", "custom": {"lineWidth": 2, "fillOpacity": 10}}},
+      "targets": [{"expr": "rate(container_cpu_usage_seconds_total{namespace='appwrite', container!=''}[5m]) * 100", "legendFormat": "{{pod}}"}]
+    },
+    {
+      "id": 8,
+      "title": "💾 Memory Usage - Per Pod",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "decmbytes", "custom": {"lineWidth": 2, "fillOpacity": 10}}},
+      "targets": [{"expr": "container_memory_usage_bytes{namespace='appwrite', container!=''} / 1024 / 1024", "legendFormat": "{{pod}} MB"}]
+    },
+    {
+      "id": 9,
+      "title": "🌐 Network In - Per Pod",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "Bps", "custom": {"lineWidth": 2, "fillOpacity": 10}}},
+      "targets": [{"expr": "rate(container_network_receive_bytes_total{namespace='appwrite'}[5m])", "legendFormat": "{{pod}} RX"}]
+    },
+    {
+      "id": 10,
+      "title": "🌐 Network Out - Per Pod",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "Bps", "custom": {"lineWidth": 2, "fillOpacity": 10}}},
+      "targets": [{"expr": "rate(container_network_transmit_bytes_total{namespace='appwrite'}[5m])", "legendFormat": "{{pod}} TX"}]
+    },
+    {
+      "id": 11,
+      "title": "📊 Resource Limits vs Usage - CPU",
+      "type": "bargauge",
+      "gridPos": {"x": 0, "y": 20, "w": 12, "h": 6},
+      "fieldConfig": {"defaults": {"unit": "percent", "thresholds": {"steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 60}, {"color": "red", "value": 80}]}}},
+      "targets": [
+        {"expr": "rate(container_cpu_usage_seconds_total{namespace='appwrite', container!=''}[5m]) * 100", "legendFormat": "Used: {{container}}"},
+        {"expr": "kube_pod_container_resource_limits{namespace='appwrite', resource='cpu'} * 100", "legendFormat": "Limit: {{container}}"}
+      ]
+    },
+    {
+      "id": 12,
+      "title": "📊 Resource Limits vs Usage - Memory",
+      "type": "bargauge",
+      "gridPos": {"x": 12, "y": 20, "w": 12, "h": 6},
+      "fieldConfig": {"defaults": {"unit": "decmbytes", "thresholds": {"steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 512}, {"color": "red", "value": 900}]}}},
+      "targets": [
+        {"expr": "container_memory_usage_bytes{namespace='appwrite', container!=''} / 1024 / 1024", "legendFormat": "Used: {{container}}"},
+        {"expr": "kube_pod_container_resource_limits{namespace='appwrite', resource='memory'} / 1024 / 1024", "legendFormat": "Limit: {{container}}"}
+      ]
+    },
+    {
+      "id": 13,
+      "title": "🔒 Security - Pod Privileged Status",
+      "type": "table",
+      "gridPos": {"x": 0, "y": 26, "w": 12, "h": 6},
+      "targets": [{"expr": "kube_pod_container_status_running{namespace='appwrite'}", "legendFormat": "{{pod}} - {{container}}", "instant": true, "format": "table"}]
+    },
+    {
+      "id": 14,
+      "title": "📈 Jenkins - Deployment Frequency",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 26, "w": 12, "h": 6},
+      "fieldConfig": {"defaults": {"custom": {"lineWidth": 2, "fillOpacity": 20}}},
+      "targets": [{"expr": "changes(kube_deployment_status_observed_generation{namespace='appwrite'}[1h])", "legendFormat": "Deployments per hour"}]
+    },
+    {
+      "id": 15,
       "title": "🚨 Active Alerts",
       "type": "alertlist",
-      "gridPos": {"x": 0, "y": 16, "w": 24, "h": 6},
+      "gridPos": {"x": 0, "y": 32, "w": 24, "h": 8},
       "options": {
-        "alertName": "",
         "dashboardAlerts": false,
-        "stateFilter": {
-          "firing": true,
-          "pending": true
-        }
+        "alertName": "",
+        "stateFilter": {"firing": true, "pending": true, "noData": false, "normal": false, "error": false}
       }
     }
   ],
   "schemaVersion": 36,
-  "version": 1,
-  "tags": ["appwrite", "kubernetes", "devsecops"]
+  "version": 2
 }

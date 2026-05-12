@@ -13,7 +13,10 @@ spec:
         app: appwrite
     spec:
       containers:
-        - name: appwrite
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          ports:
-            - containerPort: {{ .Values.containerPort }}
+      - name: appwrite
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: 80
+        envFrom:
+        - secretRef:
+            name: appwrite-secrets

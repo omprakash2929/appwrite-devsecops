@@ -58,17 +58,22 @@ pipeline {
 
         // ─── STAGE 3 ───────────────────────────────────────
         stage('SonarQube Analysis') {
-	steps {
+ steps {
         withSonarQubeEnv('sonar-server') {
-            sh '''/opt/sonar-scanner/bin/sonar-scanner \
-                -Dsonar.projectKey=appwrite-devsecops \
-                -Dsonar.projectName="Appwrite DevSecOps" \
-                -Dsonar.sources=. \
-                -Dsonar.exclusions=**/vendor/**,**/node_modules/**
-            '''
+            withCredentials([string(
+                credentialsId: 'SonarQube-Token',
+                variable: 'SONAR_TOKEN'
+            )]) {
+                sh '''/opt/sonar-scanner/bin/sonar-scanner \
+                    -Dsonar.projectKey=appwrite-devsecops \
+                    -Dsonar.projectName="Appwrite DevSecOps" \
+                    -Dsonar.sources=. \
+                    -Dsonar.exclusions=**/vendor/**,**/node_modules/** \
+                    -Dsonar.login=${SONAR_TOKEN}
+                '''
+            }
         }
-    }        
-
+    }
 }
 
         // ─── STAGE 4 ───────────────────────────────────────

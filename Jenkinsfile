@@ -17,27 +17,30 @@ pipeline {
 
     stages {
 
-        // ─── STAGE 1 ───────────────────────────────────────
+        // ─────────────────────────────────────────────
         stage('Checkout') {
             steps {
                 echo "📥 Checking out repository..."
                 checkout scm
+
                 script {
                     env.GIT_AUTHOR = sh(
                         script: 'git log -1 --pretty=%an',
                         returnStdout: true
                     ).trim()
+
                     env.GIT_MSG = sh(
                         script: 'git log -1 --pretty=%B',
                         returnStdout: true
                     ).trim()
                 }
+
                 echo "Author : ${env.GIT_AUTHOR}"
                 echo "Commit : ${env.GIT_MSG}"
             }
         }
 
-        // ─── STAGE 2 ───────────────────────────────────────
+        // ─────────────────────────────────────────────
         stage('Verify Environment') {
             steps {
                 sh '''
@@ -56,27 +59,33 @@ pipeline {
             }
         }
 
-        // ─── STAGE 3 ───────────────────────────────────────
+        // ─────────────────────────────────────────────
         stage('SonarQube Analysis') {
- steps {
-        withSonarQubeEnv('sonar-server') {
-            withCredentials([string(
-                credentialsId: 'SonarQube-Token',
-                variable: 'SONAR_TOKEN'
-            )]) {
-                sh '''/opt/sonar-scanner/bin/sonar-scanner \
-                    -Dsonar.projectKey=appwrite-devsecops \
-                    -Dsonar.projectName="Appwrite DevSecOps" \
-                    -Dsonar.sources=. \
-                    -Dsonar.exclusions=**/vendor/**,**/node_modules/** \
-                    -Dsonar.login=${SONAR_TOKEN}
-                '''
+            steps {
+
+                withSonarQubeEnv('sonar-server') {
+
+                    withCredentials([
+                        string(
+                            credentialsId: 'SonarQube-Token',
+                            variable: 'SONAR_TOKEN'
+                        )
+                    ]) {
+
+                        sh '''
+                            /opt/sonar-scanner/bin/sonar-scanner \
+                            -Dsonar.projectKey=appwrite-devsecops \
+                            -Dsonar.projectName="Appwrite DevSecOps" \
+                            -Dsonar.sources=. \
+                            -Dsonar.exclusions=**/vendor/**,**/node_modules/** \
+                            -Dsonar.login=${SONAR_TOKEN}
+                        '''
+                    }
+                }
             }
         }
-    }
-}
 
-        // ─── STAGE 4 ───────────────────────────────────────
+        // ─────────────────────────────────────────────
         stage('Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
@@ -85,33 +94,40 @@ pipeline {
             }
         }
 
-        // ─── STAGE 5 ───────────────────────────────────────
+        // ─────────────────────────────────────────────
         stage('Pull Appwrite Image') {
             steps {
+
                 sh '''
                     echo "📦 Pulling official Appwrite image..."
+
                     docker pull appwrite/appwrite:latest
 
-                    echo "🏷️  Tagging image..."
+                    echo "🏷️ Tagging image..."
+
                     docker tag appwrite/appwrite:latest ${IMAGE_NAME}:${IMAGE_TAG}
                     docker tag appwrite/appwrite:latest ${IMAGE_NAME}:latest
                 '''
             }
         }
 
-        // ─── STAGE 6 ───────────────────────────────────────
+        // ─────────────────────────────────────────────
         stage('Trivy Security Scan') {
+
             steps {
+
                 sh '''
-                    echo "🔒 Scanning image for vulnerabilities..."
+                    echo "🔒 Running Trivy Scan..."
+
                     trivy image \
-                        --severity HIGH,CRITICAL \
-                        --exit-code 0 \
-                        --format table \
-                        --no-progress \
-                        ${IMAGE_NAME}:${IMAGE_TAG} | tee trivy-report.txt
+                    --severity HIGH,CRITICAL \
+                    --exit-code 0 \
+                    --format table \
+                    --no-progress \
+                    ${IMAGE_NAME}:${IMAGE_TAG} | tee trivy-report.txt
                 '''
             }
+
             post {
                 always {
                     archiveArtifacts artifacts: 'trivy-report.txt'
@@ -119,61 +135,74 @@ pipeline {
             }
         }
 
-        // ─── STAGE 7 ───────────────────────────────────────
+        // ─────────────────────────────────────────────
         stage('Push to DockerHub') {
+
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+
                     sh '''
-                        echo "☁️  Pushing to DockerHub..."
+                        echo "☁️ Pushing image to DockerHub..."
+
                         echo $DOCKER_PASS | docker login \
-                            -u $DOCKER_USER \
-                            --password-stdin
+                        -u $DOCKER_USER \
+                        --password-stdin
 
                         docker push ${IMAGE_NAME}:${IMAGE_TAG}
                         docker push ${IMAGE_NAME}:latest
 
-                        echo "✅ Push successful!"
                         docker logout
+
+                        echo "✅ Docker push completed!"
                     '''
                 }
             }
         }
 
-        // ─── STAGE 8 ───────────────────────────────────────
+        // ─────────────────────────────────────────────
         stage('Deploy to Kubernetes') {
-	steps {
-        sh '''
-            kubectl apply -f k8s/namespace.yaml
-            kubectl apply -f k8s/mongodb.yaml -n ${NAMESPACE}
-            kubectl apply -f k8s/mariadb.yaml -n ${NAMESPACE}
-            kubectl apply -f k8s/redis.yaml   -n ${NAMESPACE}
-            
-            # Wait for databases
-            sleep 30
-            
-            helm upgrade --install appwrite ./helm/appwrite \
-                --namespace ${NAMESPACE} \
-                --create-namespace \
-                --set image.repository=${IMAGE_NAME} \
-                --set image.tag=${IMAGE_TAG} \
-                --wait \
-                --timeout 5m \
-                --atomic
-        '''
-    }        
-}
 
-        // ─── STAGE 9 ───────────────────────────────────────
-        stage('Verify Deployment') {
             steps {
+
                 sh '''
-                    echo "🔍 Checking deployment status..."
+                    kubectl apply -f k8s/namespace.yaml
+
+                    kubectl apply -f k8s/mongodb.yaml -n ${NAMESPACE}
+                    kubectl apply -f k8s/mariadb.yaml -n ${NAMESPACE}
+                    kubectl apply -f k8s/redis.yaml -n ${NAMESPACE}
+
+                    echo "⏳ Waiting for DB services..."
+                    sleep 30
+
+                    helm upgrade --install appwrite ./helm/appwrite \
+                    --namespace ${NAMESPACE} \
+                    --create-namespace \
+                    --set image.repository=${IMAGE_NAME} \
+                    --set image.tag=${IMAGE_TAG} \
+                    --wait \
+                    --timeout 5m \
+                    --atomic
+                '''
+            }
+        }
+
+        // ─────────────────────────────────────────────
+        stage('Verify Deployment') {
+
+            steps {
+
+                sh '''
+                    echo "🔍 Checking deployment..."
+
                     kubectl rollout status deployment/appwrite \
-                        -n ${NAMESPACE} --timeout=3m
+                    -n ${NAMESPACE} --timeout=3m
 
                     echo "=== Pods ==="
                     kubectl get pods -n ${NAMESPACE}
@@ -183,63 +212,68 @@ pipeline {
                 '''
             }
         }
-//------ STAGE 10 ----------------
 
+        // ─────────────────────────────────────────────
+        stage('Deploy Monitoring') {
 
-stage('Deploy Monitoring') {
+            steps {
 
-    steps {
+                sh '''
+                    echo "📊 Deploying monitoring resources..."
 
-        sh '''
-            echo "Deploying monitoring resources..."
+                    kubectl apply -f monitoring/servicemonitor.yaml
+                    kubectl apply -f monitoring/alert-rules.yaml
 
-            kubectl apply -f monitoring/servicemonitor.yaml
+                    echo "✅ Monitoring deployment completed!"
+                '''
+            }
+        }
 
-            kubectl apply -f monitoring/alert-rules.yaml
+        // ─────────────────────────────────────────────
+        stage('Verify Monitoring') {
 
-            echo "Monitoring deployment completed!"
-        '''
+            steps {
+
+                sh '''
+                    echo "🔍 Verifying monitoring resources..."
+
+                    kubectl get servicemonitor -n monitoring
+                    kubectl get prometheusrule -n monitoring
+                '''
+            }
+        }
     }
-//-------- STAGE 11-----------------
 
-stage('Verify Monitoring') {
-
-    steps {
-
-        sh '''
-            kubectl get servicemonitor -n monitoring
-
-            kubectl get prometheusrule -n monitoring
-        '''
-    }
-  }
-}
-    } 
-
-    // ─── POST ──────────────────────────────────────────────
+    // ─────────────────────────────────────────────
     post {
 
         success {
+
             echo """
             ✅ DEPLOYMENT SUCCESS
-            Image : ${IMAGE_NAME}:${IMAGE_TAG}
-            Author: ${env.GIT_AUTHOR}
-            Commit: ${env.GIT_MSG}
+
+            Image  : ${IMAGE_NAME}:${IMAGE_TAG}
+            Author : ${env.GIT_AUTHOR}
+            Commit : ${env.GIT_MSG}
             """
         }
 
         failure {
+
             echo """
             ❌ DEPLOYMENT FAILED
-            Stage : ${env.STAGE_NAME}
-            Author: ${env.GIT_AUTHOR}
-            Build : ${BUILD_URL}
+
+            Stage  : ${env.STAGE_NAME}
+            Author : ${env.GIT_AUTHOR}
+            Build  : ${BUILD_URL}
             """
         }
 
         always {
+
             sh 'docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true'
             sh 'docker logout || true'
+
             cleanWs()
         }
     }

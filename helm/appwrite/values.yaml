@@ -1,0 +1,7 @@
+image:
+  repository: omprakash2929/appwrite
+  tag: latest
+service:
+  type: ClusterIP
+  port: 80
+containerPort: 80

@@ -145,29 +145,27 @@ pipeline {
 
         // ─── STAGE 8 ───────────────────────────────────────
         stage('Deploy to Kubernetes') {
-            steps {
-                sh '''
-                    echo "🚀 Deploying to Kubernetes..."
-
-                    # Namespace apply
-                    kubectl apply -f k8s/namespace.yaml
-
-                    # MariaDB + Redis deploy
-                    kubectl apply -f k8s/mariadb.yaml -n ${NAMESPACE}
-                    kubectl apply -f k8s/redis.yaml   -n ${NAMESPACE}
-
-                    # Appwrite deploy via Helm
-                    helm upgrade --install appwrite ./helm/appwrite \
-                        --namespace ${NAMESPACE} \
-                        --create-namespace \
-                        --set image.repository=${IMAGE_NAME} \
-                        --set image.tag=${IMAGE_TAG} \
-                        --wait \
-                        --timeout 5m \
-                        --atomic
-                '''
-            }
-        }
+	steps {
+        sh '''
+            kubectl apply -f k8s/namespace.yaml
+            kubectl apply -f k8s/mongodb.yaml -n ${NAMESPACE}
+            kubectl apply -f k8s/mariadb.yaml -n ${NAMESPACE}
+            kubectl apply -f k8s/redis.yaml   -n ${NAMESPACE}
+            
+            # Wait for databases
+            sleep 30
+            
+            helm upgrade --install appwrite ./helm/appwrite \
+                --namespace ${NAMESPACE} \
+                --create-namespace \
+                --set image.repository=${IMAGE_NAME} \
+                --set image.tag=${IMAGE_TAG} \
+                --wait \
+                --timeout 5m \
+                --atomic
+        '''
+    }        
+}
 
         // ─── STAGE 9 ───────────────────────────────────────
         stage('Verify Deployment') {

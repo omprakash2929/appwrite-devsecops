@@ -245,36 +245,66 @@ pipeline {
     }
 
     // ─────────────────────────────────────────────
-    post {
 
-        success {
+post {
 
-            echo """
-            ✅ DEPLOYMENT SUCCESS
+    success {
 
-            Image  : ${IMAGE_NAME}:${IMAGE_TAG}
-            Author : ${env.GIT_AUTHOR}
-            Commit : ${env.GIT_MSG}
+        echo """
+        ✅ DEPLOYMENT SUCCESS
+
+        Image  : ${IMAGE_NAME}:${IMAGE_TAG}
+        Author : ${env.GIT_AUTHOR}
+        Commit : ${env.GIT_MSG}
+        """
+
+        withCredentials([
+            string(
+                credentialsId: 'slack-webhook',
+                variable: 'SLACK_URL'
+            )
+        ]) {
+
+            sh """
+                curl -X POST -H 'Content-type: application/json' \
+                --data '{
+                    "text":"✅ *Appwrite Deployment Successful*\\n🚀 Build: #${BUILD_NUMBER}\\n📦 Image: ${IMAGE_NAME}:${IMAGE_TAG}\\n👤 Author: ${env.GIT_AUTHOR}\\n📝 Commit: ${env.GIT_MSG}\\n🔗 Build URL: ${BUILD_URL}"
+                }' \$SLACK_URL
             """
         }
+    }
 
-        failure {
+    failure {
 
-            echo """
-            ❌ DEPLOYMENT FAILED
+        echo """
+        ❌ DEPLOYMENT FAILED
 
-            Stage  : ${env.STAGE_NAME}
-            Author : ${env.GIT_AUTHOR}
-            Build  : ${BUILD_URL}
+        Stage  : ${env.STAGE_NAME}
+        Author : ${env.GIT_AUTHOR}
+        Build  : ${BUILD_URL}
+        """
+
+        withCredentials([
+            string(
+                credentialsId: 'slack-webhook',
+                variable: 'SLACK_URL'
+            )
+        ]) {
+
+            sh """
+                curl -X POST -H 'Content-type: application/json' \
+                --data '{
+                    "text":"❌ *Appwrite Deployment Failed*\\n🚨 Stage: ${env.STAGE_NAME}\\n👤 Author: ${env.GIT_AUTHOR}\\n🔗 Build URL: ${BUILD_URL}"
+                }' \$SLACK_URL
             """
         }
+    }
 
-        always {
+    always {
 
-            sh 'docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true'
-            sh 'docker logout || true'
+        sh 'docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true'
+        sh 'docker logout || true'
 
-            cleanWs()
-        }
+        cleanWs()
     }
 }

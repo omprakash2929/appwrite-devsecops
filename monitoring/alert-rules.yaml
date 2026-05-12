@@ -1,0 +1,24 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: appwrite-alerts
+  namespace: monitoring
+spec:
+  groups:
+    - name: appwrite.rules
+      rules:
+        - alert: AppwritePodDown
+          expr: up{job="appwrite"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Appwrite pod is down"
+            description: "Appwrite has been down for more than 1 minute"
+        - alert: HighMemoryUsage
+          expr: container_memory_usage_bytes{namespace="appwrite"} > 900000000
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory usage in Appwrite"

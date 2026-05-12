@@ -1,38 +1,85 @@
 {
-  "title": "Appwrite DevSecOps Dashboard",
-  "uid": "appwrite-main",
+  "title": "Appwrite DevSecOps - Production Dashboard",
+  "uid": "appwrite-prod-v1",
+  "timezone": "browser",
+  "refresh": "10s",
   "panels": [
     {
-      "title": "Pod CPU Usage",
-      "type": "graph",
-      "targets": [
-        {
-          "expr": "rate(container_cpu_usage_seconds_total{namespace='appwrite'}[5m])",
-          "legendFormat": "{{pod}}"
-        }
-      ]
-    },
-    {
-      "title": "Pod Memory Usage",
-      "type": "graph",
-      "targets": [
-        {
-          "expr": "container_memory_usage_bytes{namespace='appwrite'}",
-          "legendFormat": "{{pod}}"
-        }
-      ]
-    },
-    {
-      "title": "Pod Restarts",
+      "id": 1,
+      "title": "🟢 Pod Status",
       "type": "stat",
-      "targets": [
-        {
-          "expr": "kube_pod_container_status_restarts_total{namespace='appwrite'}",
-          "legendFormat": "{{pod}}"
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+      "targets": [{
+        "expr": "kube_pod_status_phase{namespace='appwrite', phase='Running'}",
+        "legendFormat": "Running Pods"
+      }]
+    },
+    {
+      "id": 2,
+      "title": "⚡ CPU Usage - Appwrite",
+      "type": "graph",
+      "gridPos": {"x": 6, "y": 0, "w": 9, "h": 8},
+      "targets": [{
+        "expr": "rate(container_cpu_usage_seconds_total{namespace='appwrite', container!=''}[5m]) * 100",
+        "legendFormat": "{{pod}}"
+      }]
+    },
+    {
+      "id": 3,
+      "title": "💾 Memory Usage - Appwrite",
+      "type": "graph",
+      "gridPos": {"x": 15, "y": 0, "w": 9, "h": 8},
+      "targets": [{
+        "expr": "container_memory_usage_bytes{namespace='appwrite', container!=''} / 1024 / 1024",
+        "legendFormat": "{{pod}} (MB)"
+      }]
+    },
+    {
+      "id": 4,
+      "title": "🔄 Pod Restarts",
+      "type": "stat",
+      "gridPos": {"x": 0, "y": 4, "w": 6, "h": 4},
+      "targets": [{
+        "expr": "kube_pod_container_status_restarts_total{namespace='appwrite'}",
+        "legendFormat": "{{pod}}"
+      }]
+    },
+    {
+      "id": 5,
+      "title": "🌐 Network In - Appwrite",
+      "type": "graph",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [{
+        "expr": "rate(container_network_receive_bytes_total{namespace='appwrite'}[5m])",
+        "legendFormat": "{{pod}} RX"
+      }]
+    },
+    {
+      "id": 6,
+      "title": "🌐 Network Out - Appwrite",
+      "type": "graph",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "targets": [{
+        "expr": "rate(container_network_transmit_bytes_total{namespace='appwrite'}[5m])",
+        "legendFormat": "{{pod}} TX"
+      }]
+    },
+    {
+      "id": 7,
+      "title": "🚨 Active Alerts",
+      "type": "alertlist",
+      "gridPos": {"x": 0, "y": 16, "w": 24, "h": 6},
+      "options": {
+        "alertName": "",
+        "dashboardAlerts": false,
+        "stateFilter": {
+          "firing": true,
+          "pending": true
         }
-      ]
+      }
     }
   ],
-  "schemaVersion": 16,
-  "version": 1
+  "schemaVersion": 36,
+  "version": 1,
+  "tags": ["appwrite", "kubernetes", "devsecops"]
 }

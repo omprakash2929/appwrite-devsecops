@@ -21,9 +21,9 @@
 
 ## 📋 Project Overview
 
-This project demonstrates a **production-grade DevSecOps CI/CD pipeline** for [Appwrite](https://appwrite.io) — an open-source Firebase alternative with **54k+ GitHub stars**. The pipeline automates the entire software delivery lifecycle from code commit to production deployment with integrated security scanning, container orchestration, and full-stack observability.
+This project demonstrates a **production-grade DevSecOps CI/CD pipeline** for [Appwrite](https://appwrite.io) - an open-source Firebase alternative with **54k+ GitHub stars**. The pipeline automates the entire software delivery lifecycle from code commit to production deployment with integrated security scanning, container orchestration, and full-stack observability.
 
-> **Why Appwrite?** Appwrite is a real-world, enterprise-grade platform used by thousands of developers globally. Deploying it with a full DevSecOps pipeline demonstrates the ability to handle complex, multi-service architectures — exactly what companies like IBM, HCL, and Visa use in production.
+> **Why Appwrite?** Appwrite is a real-world, enterprise-grade platform used by thousands of developers globally. Deploying it with a full DevSecOps pipeline demonstrates the ability to handle complex, multi-service architectures - exactly what companies like IBM, HCL, and Visa use in production.
 
 ### 🎯 Key Highlights
 

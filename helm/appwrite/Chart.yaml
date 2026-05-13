@@ -1,0 +1,6 @@
+apiVersion: v2
+name: appwrite
+description: Appwrite Helm Chart
+type: application
+version: 1.0.0
+appVersion: "latest"
